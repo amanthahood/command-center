@@ -368,8 +368,15 @@ const CAL_IDS   = ['mshood@lashlabpdx.com','amanthahood@gmail.com'];
 const FB_TOKEN_PATH = 'auth/gcal_token'; // stored in Firebase for cross-device persistence
 
 // ═══ FIREBASE ═══
-let db;
-try { firebase.initializeApp(FB); db = firebase.database(); } catch(e) { console.warn(e); }
+let db = null;
+try { 
+  firebase.initializeApp(FB); 
+  db = firebase.database(); 
+  console.log('Firebase connected');
+} catch(e) { 
+  console.warn('Firebase unavailable, using localStorage:', e);
+  db = null;
+}
 
 // ═══ PIN ═══
 let pin = '';
@@ -380,9 +387,10 @@ function pp(v) {
   for(let i=0;i<4;i++) document.getElementById('d'+i).classList.toggle('on', i<pin.length);
   if (pin.length===4) {
     if (pin===PIN) {
-      document.getElementById('splash').classList.add('out');
-      setTimeout(()=>document.getElementById('splash').style.display='none', 600);
-      initApp();
+      const sp = document.getElementById('splash');
+      sp.classList.add('out');
+      setTimeout(()=>{ sp.style.display='none'; sp.style.opacity='0'; sp.style.pointerEvents='none'; }, 600);
+      setTimeout(initApp, 100);
     } else {
       document.getElementById('pin-err').textContent='Incorrect PIN';
       pin='';
@@ -672,7 +680,10 @@ function addMsg(cls,text){
 document.getElementById('claude-inp')?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();claudeSend();}});
 
 // ═══ INIT ═══
-function initApp(){initLists();initCalendar();}
+function initApp(){
+  try { initLists(); } catch(e) { console.warn('Lists init error:', e); }
+  try { initCalendar(); } catch(e) { console.warn('Calendar init error:', e); }
+}
 </script>
 </body>
 </html>
