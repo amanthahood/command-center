@@ -326,8 +326,27 @@ html,body{height:100%;font-family:'Gopher',sans-serif;background:var(--dark);col
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://apis.google.com/js/api.js"></script>
-<script src="https://accounts.google.com/gsi/client"></script>
+<script>
+// Load GAPI then GIS in sequence with proper callbacks
+function loadGapi() {
+  return new Promise((resolve) => {
+    const s = document.createElement('script');
+    s.src = 'https://apis.google.com/js/api.js';
+    s.onload = resolve;
+    s.onerror = () => { console.error('GAPI failed to load'); resolve(); };
+    document.head.appendChild(s);
+  });
+}
+function loadGis() {
+  return new Promise((resolve) => {
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.onload = resolve;
+    s.onerror = () => { console.error('GIS failed to load'); resolve(); };
+    document.head.appendChild(s);
+  });
+}
+</script>
 
 <script>
 // ═══ CONFIG ═══
@@ -470,77 +489,85 @@ function save(id,items) {
 function x(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 // ═══ CALENDAR — PERSISTENT AUTH ═══
-// Token is saved in Firebase under auth/gcal_token so it persists across ALL devices.
-// On load we check Firebase first, then attempt a silent refresh. User only sees the
-// "Connect" button if both fail — which after first login should never happen.
+const CLIENT_ID = '291402599329-naosn2fhptrhgt0pp5a79sqhrehg7qjm.apps.googleusercontent.com';
+const API_KEY   = 'AIzaSyAQhzDQyK1MTk0hnUDuNRYduV6CzM6jKMk';
+const SCOPES    = 'https://www.googleapis.com/auth/calendar.readonly';
+const CAL_IDS   = ['mshood@lashlabpdx.com','amanthahood@gmail.com'];
+const FB_TOKEN_PATH = 'auth/gcal_token';
 
 let tokenClient, calTok='', calYear, calMonth, gapiOk=false;
 
-function initCalendar() {
+async function initCalendar() {
   const now=new Date(); calYear=now.getFullYear(); calMonth=now.getMonth();
   renderGrid([]);
 
-  function setupGapi() {
-    gapi.load('client', async () => {
-      await gapi.client.init({
-        apiKey: API_KEY,
-        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest']
-      });
-      gapiOk = true;
+  const btn = document.getElementById('cal-connect');
 
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID, scope: SCOPES,
-        callback: async (resp) => {
-          if (resp.error) { console.warn(resp); return; }
-          calTok = resp.access_token;
-          // Save token + expiry to Firebase for cross-device persistence
-          const expiry = Date.now() + 55*60*1000;
-          if (db) await db.ref(FB_TOKEN_PATH).set({token:calTok, expiry});
-          markConnected();
-          fetchEvents();
+  try {
+    // Step 1: Load GAPI
+    await loadGapi();
+    
+    // Step 2: Init GAPI client
+    await new Promise((resolve, reject) => {
+      gapi.load('client', async () => {
+        try {
+          await gapi.client.init({
+            apiKey: API_KEY,
+            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest']
+          });
+          gapiOk = true;
+          resolve();
+        } catch(e) { reject(e); }
+      });
+    });
+
+    // Step 3: Load GIS
+    await loadGis();
+
+    // Step 4: Init token client
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: async (resp) => {
+        if (resp.error) {
+          console.error('OAuth error:', resp);
+          if (btn) { btn.textContent = 'Try Again'; btn.classList.remove('connected'); btn.onclick = calAuth; }
+          return;
         }
-      });
-
-      // 1. Check Firebase for a saved token first
-      if (db) {
-        db.ref(FB_TOKEN_PATH).once('value', async snap => {
-          const stored = snap.val();
-          if (stored && stored.token && stored.expiry > Date.now()) {
-            calTok = stored.token;
-            gapi.client.setToken({access_token: calTok});
-            markConnected();
-            fetchEvents();
-            // Schedule silent refresh before expiry
-            const msLeft = stored.expiry - Date.now();
-            setTimeout(silentRefresh, Math.max(0, msLeft - 60000));
-          } else {
-            // 2. Try silent OAuth (no popup) — works if user already granted access
-            silentRefresh();
-          }
-        });
-      } else {
-        silentRefresh();
+        calTok = resp.access_token;
+        const expiry = Date.now() + 55*60*1000;
+        if (db) await db.ref(FB_TOKEN_PATH).set({token:calTok, expiry});
+        markConnected();
+        fetchEvents();
+        setTimeout(silentRefresh, 54*60*1000);
       }
     });
-  }
 
-  // Wait for GIS + GAPI to load
-  if (window.gapi && window.google?.accounts) { 
-    setupGapi(); 
-  } else {
-    let attempts = 0;
-    const iv = setInterval(()=>{
-      attempts++;
-      if (window.gapi && window.google?.accounts) { 
-        clearInterval(iv); 
-        setupGapi(); 
+    // Step 5: Check Firebase for saved token
+    let usedSaved = false;
+    if (db) {
+      const snap = await db.ref(FB_TOKEN_PATH).once('value');
+      const stored = snap.val();
+      if (stored && stored.token && stored.expiry > Date.now()) {
+        calTok = stored.token;
+        gapi.client.setToken({access_token: calTok});
+        markConnected();
+        fetchEvents();
+        usedSaved = true;
+        const msLeft = stored.expiry - Date.now();
+        setTimeout(silentRefresh, Math.max(0, msLeft - 60000));
       }
-      if (attempts > 40) {
-        clearInterval(iv);
-        const btn = document.getElementById('cal-connect');
-        if (btn) { btn.textContent = 'Reload & Try Again'; btn.style.background = '#8b4'; }
-      }
-    }, 500);
+    }
+
+    // Step 6: If no saved token, try silent refresh
+    if (!usedSaved) {
+      if (btn) { btn.textContent = 'Connect Calendar'; btn.style.opacity='1'; btn.onclick = calAuth; }
+      silentRefresh();
+    }
+
+  } catch(e) {
+    console.error('Calendar init error:', e);
+    if (btn) { btn.textContent = 'Connect Calendar'; btn.style.opacity='1'; btn.onclick = calAuth; }
   }
 }
 
@@ -552,24 +579,17 @@ function silentRefresh() {
 function calAuth() {
   const btn = document.getElementById('cal-connect');
   if (!gapiOk || !tokenClient) {
-    if (btn) { btn.textContent = 'Loading...'; btn.style.background = '#555'; }
-    setTimeout(calAuth, 1000); 
+    if (btn) btn.textContent = 'Still loading...';
+    setTimeout(calAuth, 1000);
     return;
   }
-  if (btn) { btn.textContent = 'Connecting...'; btn.style.opacity = '0.7'; }
-  try {
-    tokenClient.requestAccessToken({prompt:'select_account'});
-  } catch(e) {
-    console.error('Auth error:', e);
-    if (btn) { btn.textContent = 'Try Again'; btn.style.opacity = '1'; }
-  }
+  if (btn) { btn.textContent = 'Connecting...'; btn.style.opacity='0.7'; }
+  tokenClient.requestAccessToken({prompt:'select_account'});
 }
 
 function markConnected() {
   const btn = document.getElementById('cal-connect');
-  btn.textContent = '✓ Connected';
-  btn.classList.add('connected');
-  btn.onclick = null;
+  if (btn) { btn.textContent = '✓ Connected'; btn.classList.add('connected'); btn.onclick = null; }
 }
 
 function calNav(d) {
@@ -583,8 +603,8 @@ async function fetchEvents() {
   if (!calTok) { renderGrid([]); return; }
   gapi.client.setToken({access_token:calTok});
   document.getElementById('cal-loading').style.display='block';
-  const start = new Date(calYear,calMonth,1).toISOString();
-  const end   = new Date(calYear,calMonth+1,1).toISOString();
+  const start=new Date(calYear,calMonth,1).toISOString();
+  const end=new Date(calYear,calMonth+1,1).toISOString();
   try {
     const all = await Promise.all(CAL_IDS.map(id=>
       gapi.client.calendar.events.list({
@@ -593,7 +613,10 @@ async function fetchEvents() {
       }).then(r=>r.result.items.map(e=>({...e,_cal:id}))).catch(()=>[])
     ));
     renderGrid(all.flat());
-  } catch(e) { renderGrid([]); }
+  } catch(e) { 
+    console.error('Fetch events error:', e);
+    renderGrid([]); 
+  }
   document.getElementById('cal-loading').style.display='none';
 }
 
