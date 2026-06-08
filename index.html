@@ -326,8 +326,8 @@ html,body{height:100%;font-family:'Gopher',sans-serif;background:var(--dark);col
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://apis.google.com/js/api.js" async defer></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js"></script>
+<script src="https://accounts.google.com/gsi/client"></script>
 
 <script>
 // ═══ CONFIG ═══
@@ -335,10 +335,10 @@ const PIN = '1234'; // ← change to your PIN
 
 const FB = {
   apiKey:"AIzaSyAQhzDQyK1MTk0hnUDuNRYduV6CzM6jKMk",
-  authDomain:"command-center-5b0b5.firebaseapp.com",
-  databaseURL:"https://command-center-5b0b5-default-rtdb.firebaseio.com",
-  projectId:"command-center-5b0b5",
-  storageBucket:"command-center-5b0b5.appspot.com",
+  authDomain:"amantha-command-center.firebaseapp.com",
+  databaseURL:"https://amantha-command-center-default-rtdb.firebaseio.com",
+  projectId:"amantha-command-center",
+  storageBucket:"amantha-command-center.appspot.com",
   messagingSenderId:"291402599329",
   appId:"1:291402599329:web:commandcenter"
 };
@@ -525,13 +525,21 @@ function initCalendar() {
   }
 
   // Wait for GIS + GAPI to load
-  if (window.gapi && window.google?.accounts) { setupGapi(); }
-  else {
+  if (window.gapi && window.google?.accounts) { 
+    setupGapi(); 
+  } else {
     let attempts = 0;
     const iv = setInterval(()=>{
       attempts++;
-      if (window.gapi && window.google?.accounts) { clearInterval(iv); setupGapi(); }
-      if (attempts > 30) clearInterval(iv);
+      if (window.gapi && window.google?.accounts) { 
+        clearInterval(iv); 
+        setupGapi(); 
+      }
+      if (attempts > 40) {
+        clearInterval(iv);
+        const btn = document.getElementById('cal-connect');
+        if (btn) { btn.textContent = 'Reload & Try Again'; btn.style.background = '#8b4'; }
+      }
     }, 500);
   }
 }
@@ -542,10 +550,19 @@ function silentRefresh() {
 }
 
 function calAuth() {
+  const btn = document.getElementById('cal-connect');
   if (!gapiOk || !tokenClient) {
-    setTimeout(calAuth, 800); return;
+    if (btn) { btn.textContent = 'Loading...'; btn.style.background = '#555'; }
+    setTimeout(calAuth, 1000); 
+    return;
   }
-  tokenClient.requestAccessToken({prompt:'select_account'});
+  if (btn) { btn.textContent = 'Connecting...'; btn.style.opacity = '0.7'; }
+  try {
+    tokenClient.requestAccessToken({prompt:'select_account'});
+  } catch(e) {
+    console.error('Auth error:', e);
+    if (btn) { btn.textContent = 'Try Again'; btn.style.opacity = '1'; }
+  }
 }
 
 function markConnected() {
@@ -610,7 +627,7 @@ async function claudeSend(){
   const th=addMsg('think','✦ Thinking…');
   try{
     const r=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json'},
+      method:'POST',headers:{'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',max_tokens:1000,
         system:"You are Amantha Hood's personal Command Center AI. She owns Lash Lab PDX, Glam Lab PDX, and Beauty University PDX in Portland OR. Fiancé Chris, daughters Iman & Akina. Be direct and concise.",
