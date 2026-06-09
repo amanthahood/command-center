@@ -104,21 +104,47 @@ html,body{height:100%;font-family:'Gopher',sans-serif;background:var(--dark);col
 .gi:hover .gd{opacity:1;}
 .gd:hover{color:#e07070;}
 
-/* CALENDAR */
+/* CALENDAR — brighter home */
+#sec-calendar .sbody{background:linear-gradient(160deg,#2d2418 0%,#1e170b 100%);}
 #cal-top{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
-#cal-lbl{font-size:20px;letter-spacing:2px;flex:1;font-weight:400;}
-.cnav{background:var(--dark2);border:1px solid var(--border);color:var(--gold);padding:5px 12px;border-radius:8px;cursor:pointer;font-size:16px;}
+#cal-lbl{font-size:20px;letter-spacing:2px;flex:1;font-weight:400;color:var(--gold-light);}
+.cnav{background:rgba(201,168,76,.1);border:1px solid var(--border);color:var(--gold);padding:5px 12px;border-radius:8px;cursor:pointer;font-size:16px;}
 #cal-connect{background:linear-gradient(135deg,var(--gold-dark),var(--gold));border:none;border-radius:20px;padding:7px 16px;color:var(--dark);font-size:9px;font-weight:600;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;font-family:'Gopher',sans-serif;}
 #cal-connect.connected{background:#2a5a2a;color:#90d090;cursor:default;}
-#cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+#cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
 .cdow{text-align:center;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);padding:8px 0;font-weight:600;}
-.cday{min-height:70px;border-radius:7px;background:var(--dark2);border:1px solid var(--border);padding:5px;font-size:10px;color:var(--muted);overflow:hidden;}
-.cday.today{border-color:var(--gold);background:rgba(201,168,76,.07);color:var(--gold-light);}
-.cday.other{opacity:.28;}
-.cdn{font-weight:600;font-size:11px;margin-bottom:2px;}
-.cev{font-size:8px;padding:2px 4px;border-radius:3px;margin-top:2px;background:rgba(201,168,76,.18);color:var(--gold-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.cev.pers{background:rgba(140,90,200,.25);color:#c8a0e8;}
+.cday{min-height:66px;border-radius:8px;background:rgba(255,255,255,.035);border:1px solid rgba(201,168,76,.12);padding:5px;font-size:10px;color:var(--muted);overflow:hidden;transition:box-shadow .2s;}
+.cday.today{
+  border:2px solid var(--gold);
+  background:rgba(201,168,76,.11);
+  color:var(--gold-light);
+  box-shadow:0 0 14px rgba(201,168,76,.3),inset 0 0 10px rgba(201,168,76,.06);
+}
+.cday.today .cdn{color:var(--gold);font-size:13px;font-weight:700;}
+.cday.other{opacity:.2;}
+.cdn{font-weight:600;font-size:11px;margin-bottom:3px;}
+.cev{font-size:8px;padding:2px 4px;border-radius:3px;margin-top:2px;background:rgba(201,168,76,.2);color:var(--gold-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cev.pers{background:rgba(140,90,200,.3);color:#d0b0f0;}
 #cal-info{font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:12px;}
+
+/* TODAY'S FOCUS */
+#focus-wrap{margin-top:22px;}
+#focus-head{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+#focus-head::before{content:'⚑';font-size:13px;}
+.fitem{display:flex;align-items:flex-start;gap:10px;padding:9px 13px;border-radius:10px;background:rgba(255,255,255,.04);border-left:3px solid var(--gold);margin-bottom:6px;}
+.fitem-text{flex:1;font-size:12px;line-height:1.5;color:var(--cream);}
+.fitem-src{font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;flex-shrink:0;margin-top:3px;white-space:nowrap;}
+#focus-empty{font-size:11px;color:var(--muted);letter-spacing:1px;padding:8px 0;}
+
+/* PRIORITY badges */
+.pri-sel{border:none;background:transparent;font-family:'Gopher',sans-serif;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;padding:4px 8px;border-radius:6px;flex-shrink:0;outline:none;}
+.pri-sel.p-high{color:#f07070;background:rgba(240,112,112,.15);}
+.pri-sel.p-med{color:#e2c97e;background:rgba(226,201,126,.12);}
+.pri-sel.p-low{color:var(--muted);background:rgba(184,168,120,.08);}
+.pbadge{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 6px;border-radius:4px;flex-shrink:0;margin-top:2px;}
+.pbadge.p-high{color:#f07070;background:rgba(240,112,112,.15);}
+.pbadge.p-med{color:#e2c97e;background:rgba(226,201,126,.12);}
+.pbadge.p-low{color:var(--muted);background:rgba(184,168,120,.08);}
 
 /* CLAUDE */
 #cwrap{display:flex;flex-direction:column;height:100%;}
@@ -197,6 +223,10 @@ html,body{height:100%;font-family:'Gopher',sans-serif;background:var(--dark);col
           <button id="cal-connect" onclick="calAuth()">Connect Calendar</button>
         </div>
         <div id="cal-grid"></div>
+        <div id="focus-wrap">
+          <div id="focus-head">Today's Focus — High Priority</div>
+          <div id="focus-items"></div>
+        </div>
       </div>
     </div>
 
@@ -335,68 +365,104 @@ function goT(sec,tab,btn){
 
 // LISTS — localStorage only, no external deps
 const LISTS=[
-  {id:'personal-day',goal:false},{id:'personal-week',goal:false},{id:'personal-month',goal:false},
-  {id:'family-iman',goal:false},{id:'family-akina',goal:false},{id:'family-chris',goal:false},
-  {id:'family-grocery',goal:false},{id:'family-home',goal:false},{id:'family-projects',goal:false},
-  {id:'business-lash',goal:false},{id:'business-bu',goal:false},{id:'business-glam',goal:false},
-  {id:'business-meetings',goal:false},{id:'business-content',goal:false},
-  {id:'goals-2026',goal:true},{id:'goals-2027',goal:true},{id:'goals-tenyear',goal:true}
+  {id:'personal-day',label:'Personal Day',goal:false},{id:'personal-week',label:'Personal Week',goal:false},{id:'personal-month',label:'Personal Month',goal:false},
+  {id:'family-iman',label:'Iman',goal:false},{id:'family-akina',label:'Akina',goal:false},{id:'family-chris',label:'Chris',goal:false},
+  {id:'family-grocery',label:'Grocery',goal:false},{id:'family-home',label:'Home To-Do',goal:false},{id:'family-projects',label:'Year Projects',goal:false},
+  {id:'business-lash',label:'Lash Lab',goal:false},{id:'business-bu',label:'Beauty University',goal:false},{id:'business-glam',label:'Glam Lab',goal:false},
+  {id:'business-meetings',label:'Team Meetings',goal:false},{id:'business-content',label:'Content',goal:false},
+  {id:'goals-2026',label:'2026 Goals',goal:true},{id:'goals-2027',label:'2027–2030',goal:true},{id:'goals-tenyear',label:'10-Year Vision',goal:true}
 ];
 const D={};
 
 function loadAll(){
   LISTS.forEach(def=>{
     try{D[def.id]=JSON.parse(localStorage.getItem('cc2_'+def.id)||'[]');}catch(e){D[def.id]=[];}
+    D[def.id]=D[def.id].map(item=>typeof item==='string'?{text:item,done:false,priority:'low'}:(!item.priority?{...item,priority:'low'}:item));
     const el=document.getElementById(def.id);
     if(!el) return;
     el.innerHTML=buildUI(def);
     render(def);
   });
+  renderFocus();
 }
 
 function buildUI(def){
   return `<div class="lcard">
     <div class="arow">
       <input class="ainp" id="inp-${def.id}" placeholder="${def.goal?'Add a goal…':'Add item…'}" onkeydown="if(event.key==='Enter')add('${def.id}')"/>
+      <select class="pri-sel p-med" id="pri-${def.id}" onchange="updatePriSel('${def.id}')">
+        <option value="high">● High</option>
+        <option value="med" selected>● Med</option>
+        <option value="low">● Low</option>
+      </select>
       <button class="abtn" onclick="add('${def.id}')">+</button>
     </div>
     <div class="iwrap" id="items-${def.id}"></div>
   </div>`;
 }
 
+function updatePriSel(id){
+  const sel=document.getElementById('pri-'+id);
+  sel.className='pri-sel p-'+sel.value;
+}
+
 function render(def){
   const el=document.getElementById('items-'+def.id);
   if(!el) return;
   const items=D[def.id]||[];
-  if(!items.length){el.innerHTML='<div class="empty">Nothing yet — add something ✦</div>';return;}
-  el.innerHTML=items.map((item,i)=>def.goal?`
+  if(!items.length){el.innerHTML='<div class="empty">Nothing yet — add something ❆</div>';return;}
+  el.innerHTML=items.map((item,i)=>{
+    const pri=item.priority||'low';
+    const priOpts=['high','med','low'].map(p=>`<option value="${p}"${pri===p?' selected':''}>${p==='high'?'● High':p==='med'?'● Med':'● Low'}</option>`).join('');
+    if(def.goal) return `
     <div class="gi">
       <div class="gc ${item.done?'done':''}" onclick="tog('${def.id}',${i})"></div>
       <div class="gt ${item.done?'done':''}">${x(item.text)}</div>
+      <select class="pri-sel p-${pri}" onchange="setPri('${def.id}',${i},this.value);this.className='pri-sel p-'+this.value">${priOpts}</select>
       <button class="gd" onclick="del('${def.id}',${i})">&#10005;</button>
-    </div>`:`
+    </div>`;
+    return `
     <div class="ti">
       <div class="tc ${item.done?'done':''}" onclick="tog('${def.id}',${i})"></div>
       <div class="tt ${item.done?'done':''}">${x(item.text)}</div>
+      <select class="pri-sel p-${pri}" onchange="setPri('${def.id}',${i},this.value);this.className='pri-sel p-'+this.value">${priOpts}</select>
       <button class="td" onclick="del('${def.id}',${i})">&#10005;</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function add(id){
   const inp=document.getElementById('inp-'+id);
+  const sel=document.getElementById('pri-'+id);
   const t=inp?.value.trim();if(!t)return;
-  const items=D[id]||[];items.push({text:t,done:false});
+  const pri=sel?.value||'low';
+  const items=D[id]||[];items.push({text:t,done:false,priority:pri});
   save(id,items);inp.value='';
 }
 function tog(id,i){const items=D[id]||[];if(items[i])items[i].done=!items[i].done;save(id,items);}
 function del(id,i){const items=D[id]||[];items.splice(i,1);save(id,items);}
+function setPri(id,i,v){const items=D[id]||[];if(items[i])items[i].priority=v;save(id,items);}
 function save(id,items){
   D[id]=items;
   try{localStorage.setItem('cc2_'+id,JSON.stringify(items));}catch(e){}
   const def=LISTS.find(d=>d.id===id);
   if(def)render(def);
+  renderFocus();
 }
 function x(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function renderFocus(){
+  const wrap=document.getElementById('focus-items');
+  if(!wrap)return;
+  const highs=[];
+  LISTS.forEach(def=>{
+    (D[def.id]||[]).forEach(item=>{
+      if(item.priority==='high'&&!item.done) highs.push({text:item.text,src:def.label});
+    });
+  });
+  if(!highs.length){wrap.innerHTML='<div id="focus-empty">No high-priority items yet — flag items as High from any list ❆</div>';return;}
+  wrap.innerHTML=highs.map(h=>`<div class="fitem"><div class="fitem-text">${x(h.text)}</div><div class="fitem-src">${x(h.src)}</div></div>`).join('');
+}
 
 // CALENDAR — loads Google API dynamically, non-blocking
 const CID='291402599329-naosn2fhptrhgt0pp5a79sqhrehg7qjm.apps.googleusercontent.com';
